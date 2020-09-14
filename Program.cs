@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 namespace AutoMove
 {
@@ -27,30 +26,72 @@ namespace AutoMove
 
         static void Main(string[] args)
         {
-            //Console.WriteLine(Directory.Exists(@"C:\Users\User\Desktop\dir.zip"));
             var handle = GetConsoleWindow();
 
             // Hide / Show
             ShowWindow(handle, SW_SHOW);
 
-            using (FileSystemWatcher watcher = new FileSystemWatcher())
+            FileSystemWatcher watcher = new FileSystemWatcher();
+            watcher.Path = folderPath;
+
+            watcher.NotifyFilter = NotifyFilters.LastWrite;
+            watcher.Filter = "*.*";
+            watcher.Changed += OnChanged;
+            watcher.EnableRaisingEvents = true;
+
+            Console.WriteLine("Press 'q' to quit the sample.");
+            while (Console.Read() != 'q') ;
+        }
+
+        static void MoveDirectory(string path, string destination, string directoryName)
+        {
+            string fileName = Path.GetFileName(path);
+
+            Console.WriteLine("Directory: " + path);
+
+            List<string> files = new List<string>();
+            files.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories));
+
+            // Picking correct directory name
+            int i = 0;
+            if (Directory.Exists($@"{destination}\{fileName}"))
             {
-                watcher.Path = folderPath;
-
-                watcher.NotifyFilter = NotifyFilters.LastWrite;
-                watcher.Filter = "*.*";
-                watcher.Changed += OnChanged;
-                watcher.EnableRaisingEvents = true;
-
-                Console.WriteLine("Press 'q' to quit the sample.");
-                while (Console.Read() != 'q') ;
+                while (Directory.Exists($@"{destination}\{fileName} ({i})"))
+                    i++;
+                directoryName += $" ({i})";
             }
+
+            foreach (var file in files)
+                Console.WriteLine(file);
+
+            DirectoryInfo mDir = new DirectoryInfo(path);
+            mDir.MoveTo(destination + "\\" + directoryName);
+        }
+
+        static void MoveFile(string path, string destination, string fileName)
+        {
+            string fileExtension = Path.GetExtension(path);
+            string fullFileName = Path.GetFileName(path);
+
+            Console.WriteLine("File: " + path);
+
+            // Picking correct file name
+            int i = 0;
+            if (File.Exists($@"{destination}\{fullFileName}"))
+            {
+                while (File.Exists($@"{destination}\{fileName} ({i}){fileExtension}"))
+                    i++;
+                fileName += $" ({i}){fileExtension}";
+            }
+            else
+                fileName += fileExtension;
+
+            File.Move(path, $@"{destination}\{fileName}");
         }
 
         static void OnChanged(object source, FileSystemEventArgs e)
         {
             string fileName = Path.GetFileNameWithoutExtension(e.FullPath);
-            string fileExtension = Path.GetExtension(e.FullPath);
             string destination;
 
             // Setting destination path
@@ -77,44 +118,15 @@ namespace AutoMove
             }
 
             string path = e.FullPath;
-
             // If directory was added
             if (Directory.Exists(path))
             {
-                Console.WriteLine("Directory: " + path);
-                List<string> files = new List<string>();
-                files.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories));
-
-                int i = 0;
-                if (Directory.Exists($@"{destination}\{e.Name}"))
-                {
-                    while (Directory.Exists($@"{destination}\{e.Name} ({i})"))
-                        i++;
-                    fileName += $" ({i})";
-                }
-
-                foreach (var file in files)
-                    Console.WriteLine(file);
-
-                DirectoryInfo mDir = new DirectoryInfo(path);
-                mDir.MoveTo(destination + "\\" + fileName);
+                MoveDirectory(path, destination, fileName);
             }
             // If file was added
             else if (File.Exists(path))
             {
-                Console.WriteLine("File: " + path);
-
-                int i = 0;
-                if (File.Exists($@"{destination}\{e.Name}"))
-                {
-                    while (File.Exists($@"{destination}\{fileName} ({i}){fileExtension}"))
-                        i++;
-                    fileName += $" ({i}){fileExtension}";
-                }
-                else
-                    fileName += fileExtension;
-
-                File.Move(path, $@"{destination}\{fileName}");
+                MoveFile(path, destination, fileName);
             }
         }
     }
