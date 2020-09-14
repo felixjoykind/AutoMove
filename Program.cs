@@ -1,12 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace AutoMove
 {
     class Program
     {
-        // all paths
+        // All paths
         static string folderPath = @"D:\sort shit";
         static string defaultDestinationPath = @"D:\";
         static string imagesDestinationPath = @"D:\images";
@@ -25,10 +27,11 @@ namespace AutoMove
 
         static void Main(string[] args)
         {
+            //Console.WriteLine(Directory.Exists(@"C:\Users\User\Desktop\dir.zip"));
             var handle = GetConsoleWindow();
 
-            // Hide
-            ShowWindow(handle, SW_HIDE);
+            // Hide / Show
+            ShowWindow(handle, SW_SHOW);
 
             using (FileSystemWatcher watcher = new FileSystemWatcher())
             {
@@ -50,7 +53,7 @@ namespace AutoMove
             string fileExtension = Path.GetExtension(e.FullPath);
             string destination;
 
-            // setting destination path
+            // Setting destination path
             switch (e.GetFileType())
             {
                 case FileType.Image:
@@ -73,18 +76,46 @@ namespace AutoMove
                     break;
             }
 
-            // choosing correct file name
-            int i = 0;
-            if (File.Exists($@"{destination}\{e.Name}"))
-            {
-                while (File.Exists($@"{destination}\{fileName} ({i}){fileExtension}"))
-                    i++;
-                fileName += $" ({i}){fileExtension}";
-            }
-            else
-                fileName += fileExtension;
+            string path = e.FullPath;
 
-            File.Move(e.FullPath, $@"{destination}\{fileName}");
+            // If directory was added
+            if (Directory.Exists(path))
+            {
+                Console.WriteLine("Directory: " + path);
+                List<string> files = new List<string>();
+                files.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories));
+
+                int i = 0;
+                if (Directory.Exists($@"{destination}\{e.Name}"))
+                {
+                    while (Directory.Exists($@"{destination}\{e.Name} ({i})"))
+                        i++;
+                    fileName += $" ({i})";
+                }
+
+                foreach (var file in files)
+                    Console.WriteLine(file);
+
+                DirectoryInfo mDir = new DirectoryInfo(path);
+                mDir.MoveTo(destination + "\\" + fileName);
+            }
+            // If file was added
+            else if (File.Exists(path))
+            {
+                Console.WriteLine("File: " + path);
+
+                int i = 0;
+                if (File.Exists($@"{destination}\{e.Name}"))
+                {
+                    while (File.Exists($@"{destination}\{fileName} ({i}){fileExtension}"))
+                        i++;
+                    fileName += $" ({i}){fileExtension}";
+                }
+                else
+                    fileName += fileExtension;
+
+                File.Move(path, $@"{destination}\{fileName}");
+            }
         }
     }
 
@@ -101,7 +132,7 @@ namespace AutoMove
     {
         public static FileType GetFileType(this FileSystemEventArgs e)
         {
-            // returning FileType based on file extension
+            // Returning FileType based on file extension
             string extension = Path.GetExtension(e.FullPath);
             if (extension == ".png" || extension == ".jpg" || extension == ".HEIC"
                 || extension == ".jfif" || extension == ".mp4")
