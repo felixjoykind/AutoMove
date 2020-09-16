@@ -12,8 +12,8 @@ namespace AutoMove
         static string defaultDestinationPath = @"D:\";
         static string imagesDestinationPath = @"D:\images";
         static string iconsDestinationPath = @"D:\icons";
-        static string appsDestinationPath = @"D:\apps";
-        static string textsDestinationPath = @"D:\texts";
+        static string appsDestinationPath = @"D:\Apps";
+        static string textsDestinationPath = @"D:\Texts";
 
         [DllImport("kernel32.dll")]
         static extern IntPtr GetConsoleWindow();
@@ -45,18 +45,14 @@ namespace AutoMove
 
         static void MoveDirectory(string path, string destination, string directoryName)
         {
-            string fileName = Path.GetFileName(path);
-
-            Console.WriteLine("Directory: " + path);
-
             List<string> files = new List<string>();
             files.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories));
 
             // Picking correct directory name
             int i = 0;
-            if (Directory.Exists($@"{destination}\{fileName}"))
+            if (Directory.Exists($@"{destination}\{directoryName}"))
             {
-                while (Directory.Exists($@"{destination}\{fileName} ({i})"))
+                while (Directory.Exists($@"{destination}\{directoryName} ({i})"))
                     i++;
                 directoryName += $" ({i})";
             }
@@ -64,20 +60,19 @@ namespace AutoMove
             foreach (var file in files)
                 Console.WriteLine(file);
 
+            // Moving directory
             DirectoryInfo mDir = new DirectoryInfo(path);
             mDir.MoveTo(destination + "\\" + directoryName);
+            Console.WriteLine("Directory: " + path + " moved to: " + destination + "\\" + directoryName);
         }
-
+        
         static void MoveFile(string path, string destination, string fileName)
         {
             string fileExtension = Path.GetExtension(path);
-            string fullFileName = Path.GetFileName(path);
-
-            Console.WriteLine("File: " + path);
 
             // Picking correct file name
             int i = 0;
-            if (File.Exists($@"{destination}\{fullFileName}"))
+            if (File.Exists($@"{destination}\{fileName}{fileExtension}"))
             {
                 while (File.Exists($@"{destination}\{fileName} ({i}){fileExtension}"))
                     i++;
@@ -86,7 +81,10 @@ namespace AutoMove
             else
                 fileName += fileExtension;
 
-            File.Move(path, $@"{destination}\{fileName}");
+            // Moving file
+            FileInfo mFile = new FileInfo(path);
+            mFile.MoveTo(destination + "\\" + fileName);
+            Console.WriteLine("File: " + path + " moved to: " + destination + "\\" + fileName);
         }
 
         static void OnChanged(object source, FileSystemEventArgs e)
@@ -120,14 +118,10 @@ namespace AutoMove
             string path = e.FullPath;
             // If directory was added
             if (Directory.Exists(path))
-            {
                 MoveDirectory(path, destination, fileName);
-            }
             // If file was added
             else if (File.Exists(path))
-            {
                 MoveFile(path, destination, fileName);
-            }
         }
     }
 
@@ -151,7 +145,7 @@ namespace AutoMove
                 return FileType.Image;
             else if (extension == ".txt" || extension == ".docx" || extension == ".xlsx")
                 return FileType.Text;
-            else if (extension == ".exe")
+            else if (extension == ".exe" || extension == ".jar")
                 return FileType.App;
             else if (extension == ".ico")
                 return FileType.Icon;
